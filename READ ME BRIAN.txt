@@ -1,7 +1,7 @@
 To upload the compiled bin file using ESP Tool:
 
 C:\Users\brs09\Documents\esptool-master\esptool.py --port COM9 write_flash 0x0000 "C:\Users\brs09\Documents\WLED\.pio\build\d1_mini\firmware.bin"
-
+C:\Users\maylo\Documents\Esptool\esptool-v3.3-win64\esptool --port COM6 write_flash 0x0000 "C:\dev\WLED\.pio\build\d1_mini\firmware.bin"
 
 Wiring:
 
