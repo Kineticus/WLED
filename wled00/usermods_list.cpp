@@ -192,6 +192,10 @@ void registerUsermods()
    * \/ \/ \/
    */
   //usermods.add(new MyExampleUsermod());
+
+  //AND THIS
+  usermods.add(new WelicanPrism());
+
   #ifdef USERMOD_BATTERY_STATUS_BASIC
   usermods.add(new UsermodBatteryBasic());
   #endif
@@ -311,8 +315,6 @@ void registerUsermods()
   #ifdef USERMOD_SI7021_MQTT_HA
   usermods.add(new Si7021_MQTT_HA());
   #endif
-  //AND THIS
-  usermods.add(new WelicanPrism());
 
   #ifdef USERMOD_SMARTNEST
   usermods.add(new Smartnest());
