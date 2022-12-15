@@ -80,7 +80,6 @@ uint16_t mode_static(void) {
 }
 static const char _data_FX_MODE_STATIC[] PROGMEM = "Solid";
 
-
 /*
  * Blink/strobe function
  * Alternate between color1 and color2
@@ -4569,6 +4568,233 @@ uint16_t mode_FlowStripe(void) {
 } // mode_FlowStripe()
 static const char _data_FX_MODE_FLOWSTRIPE[] PROGMEM = "Flow Stripe@Hue speed,Effect speed;;";
 
+//////// BEGIN WELICAN GEMINA STUFF HERE //////
+
+int i, j, k, A[] = {0, 0, 0};
+float u, v, w, s, h;
+static float onethird = 0.333333333;
+static float onesixth = 0.166666667;
+int T[] = {0x15, 0x38, 0x32, 0x2c, 0x0d, 0x13, 0x07, 0x2a};
+float yoffset = random(-5000, 8000);
+float xoffset = random(-5000, 8000);
+float spaceinc = 0;
+float timeinc = 0;
+
+int LEDs_for_simplex = 6;
+int node_spacing = SEGLEN / LEDs_for_simplex;
+
+int b(int N, int B) {
+  return N >> B & 1;
+}
+
+int a(int i, int j, int k, int B) {
+  return T[b(i, B) << 2 | b(j, B) << 1 | b(k, B)];
+}
+
+int shuffle(int i, int j, int k) {
+  return a(i, j, k, 0) + a(j, k, i, 1) + a(k, i, j, 2) + a(i, j, k, 3) + a(j, k, i, 4) + a(k, i, j, 5) + a(i, j, k, 6) + a(j, k, i, 7);
+}
+
+int fastfloor(float n) {
+  return n > 0 ? (int) n : (int) n - 1;
+}
+
+float k_fn(int a) {
+  s = (A[0] + A[1] + A[2]) * onesixth;
+  float x = u - A[0] + s;
+  float y = v - A[1] + s;
+  float z = w - A[2] + s;
+  float t = 0.6f - x * x - y * y - z * z;
+  int h = shuffle(i + A[0], j + A[1], k + A[2]);
+  A[a]++;
+  if (t < 0) return 0;
+  int b5 = h >> 5 & 1;
+  int b4 = h >> 4 & 1;
+  int b3 = h >> 3 & 1;
+  int b2 = h >> 2 & 1;
+  int b = h & 3;
+  float p = b == 1 ? x : b == 2 ? y : z;
+  float q = b == 1 ? y : b == 2 ? z : x;
+  float r = b == 1 ? z : b == 2 ? x : y;
+  p = b5 == b3 ? -p : p;
+  q = b5 == b4 ? -q: q;
+  r = b5 != (b4^b3) ? -r : r;
+  t *= t;
+  return 8 * t * t * (p + (b == 0 ? q + r : b2 == 0 ? q : r));
+}
+
+float SimplexNoise(float x, float y, float z) {
+  // Skew input space to relative coordinate in simplex cell
+  s = (x + y + z) * onethird;
+  i = fastfloor(x+s);
+  j = fastfloor(y+s);
+  k = fastfloor(z+s);
+   
+  // Unskew cell origin back to (x, y , z) space
+  s = (i + j + k) * onesixth;
+  u = x - i + s;
+  v = y - j + s;
+  w = z - k + s;;
+   
+  A[0] = A[1] = A[2] = 0;
+   
+  // For 3D case, the simplex shape is a slightly irregular tetrahedron.
+  // Determine which simplex we're in
+  int hi = u >= w ? u >= v ? 0 : 1 : v >= w ? 1 : 2;
+  int lo = u < w ? u < v ? 0 : 1 : v < w ? 1 : 2;
+   
+  return k_fn(hi) + k_fn(3 - hi - lo) + k_fn(lo) + k_fn(0);
+}
+
+void SimplexNoisePatternInterpolated(float spaceinc, float xoffset, float yoffset) {
+
+  // Simplex noise for whole strip of LEDs.
+  // (Well, it's simplex noise for set number of LEDs and cubic interpolation between those nodes.)
+  
+    // Calculate simplex noise for LEDs that are nodes:
+    // Store raw values from simplex function (-0.347 to 0.347)
+    //float xoffset = 0.0;
+  float xoffset_holder =  xoffset;
+  float LED_array_red[SEGLEN];
+  float LED_array_green[SEGLEN];
+  float LED_array_blue[SEGLEN];
+  LEDs_for_simplex = SEGLEN / 3;
+  node_spacing = SEGLEN / LEDs_for_simplex;
+  
+    for (int i=0; i<=SEGLEN; i=i+node_spacing) {
+      xoffset += spaceinc;
+      LED_array_red[i] = SimplexNoise(xoffset,yoffset,0);
+      LED_array_green[i] = SimplexNoise(xoffset,yoffset,1);
+      LED_array_blue[i] = SimplexNoise(xoffset,yoffset,2);
+    }
+
+  xoffset = xoffset_holder;
+  
+  // Interpolate values for LEDs between nodes
+  for (int i=0; i<SEGLEN; i++) {
+    int position_between_nodes = i % node_spacing;
+    int last_node, next_node;
+
+    // If at node, skip
+    if ( position_between_nodes == 0 ) {
+      // At node for simplex noise, do nothing but update which nodes we are between
+      last_node = i;
+      next_node = last_node + node_spacing;
+    }
+    // Else between two nodes, so identify those nodes
+    else {
+      // And interpolate between the values at those nodes for red, green, and blue
+      float t = float(position_between_nodes) / float(node_spacing);
+      float t_squaredx3 = 3*t*t;
+      float t_cubedx2 = 2*t*t*t;
+      LED_array_red[i] = LED_array_red[last_node] * ( t_cubedx2 - t_squaredx3 + 1.0 ) + LED_array_red[next_node] * ( -t_cubedx2 + t_squaredx3 );
+      LED_array_green[i] = LED_array_green[last_node] * ( t_cubedx2 - t_squaredx3 + 1.0 ) + LED_array_green[next_node] * ( -t_cubedx2 + t_squaredx3 );
+      LED_array_blue[i] = LED_array_blue[last_node] * ( t_cubedx2 - t_squaredx3 + 1.0 ) + LED_array_blue[next_node] * ( -t_cubedx2 + t_squaredx3 );
+    }
+  }
+  
+ 
+  // Convert values from raw noise to scaled r,g,b and feed to strip
+  for (int i=0; i<SEGLEN; i++) {
+    int r = bri*((LED_array_red[i]*734 + 16)/255);
+    int g = bri*((LED_array_green[i]*734 + 16)/255);
+    int b = bri*((LED_array_blue[i]*734 + 16)/255);
+      
+    if ( r>255 ) { r=255; }
+    else if ( r<0 ) { r=0; }  // Adds no time at all. Conclusion: constrain() sucks.
+  
+    if ( g>255 ) { g=255; }
+    else if ( g<0 ) { g=0; }
+  
+    if ( b>255 ) { b=255; }
+    else if ( b<0 ) { b=0; }  
+    //Convert to 24 bit output for WS2811
+
+    //strip.setPixelColor(i, strip.Color(r, g , b));
+    SEGMENT.setPixelColor(i, r,g, b);
+  }
+}
+
+void SimplexNoisePatternFull(float spaceinc, float xoffset, float yoffset) {
+
+  // Simplex noise for whole strip of LEDs.
+  // (Well, it's simplex noise for set number of LEDs and cubic interpolation between those nodes.)
+  
+    // Calculate simplex noise for LEDs that are nodes:
+    // Store raw values from simplex function (-0.347 to 0.347)
+    //float xoffset = 0.0;
+
+  float LED_array_red[SEGLEN];
+  float LED_array_green[SEGLEN];
+  float LED_array_blue[SEGLEN];
+  
+  for (int i=0; i<=SEGLEN; i++) {
+    xoffset += spaceinc;
+    LED_array_red[i] = SimplexNoise(xoffset,yoffset,0);
+    LED_array_green[i] = SimplexNoise(xoffset,yoffset,1);
+    LED_array_blue[i] = SimplexNoise(xoffset,yoffset,2);
+  }
+ 
+ 
+  // Convert values from raw noise to scaled r,g,b and feed to strip
+  for (int i=0; i<SEGLEN; i++) {
+    int r = bri*((LED_array_red[i]*734 + 16)/255);
+    int g = bri*((LED_array_green[i]*734 + 16)/255);
+    int b = bri*((LED_array_blue[i]*734 + 16)/255);
+      
+    if ( r>255 ) { r=255; }
+    else if ( r<0 ) { r=0; }  // Adds no time at all. Conclusion: constrain() sucks.
+  
+    if ( g>255 ) { g=255; }
+    else if ( g<0 ) { g=0; }
+  
+    if ( b>255 ) { b=255; }
+    else if ( b<0 ) { b=0; }  
+    //Convert to 24 bit output for WS2811
+
+    //strip.setPixelColor(i, strip.Color(r, g , b));
+    SEGMENT.setPixelColor(i, r,g, b);
+  }
+
+  //Better Offset Checking
+  //Probably should just have another for loop that adds them all up to be more accurate
+  if ((LED_array_red[0] == 0) && (LED_array_green[0] == 0) && (LED_array_blue[0] == 0))
+  {
+    if ((LED_array_red[SEGLEN / 2] == 0) && (LED_array_green[SEGLEN / 2] == 0) && (LED_array_blue[SEGLEN / 2] == 0))
+    {
+      if ((LED_array_red[SEGLEN] == 0) && (LED_array_green[SEGLEN] == 0) && (LED_array_blue[SEGLEN] == 0))
+      {
+        //Generate new offset with random and environmental (pin voltages)
+        yoffset = random(-5000, 8000);
+ 	      xoffset = random(-5000, 8000);
+        #ifdef DEBUG
+          Serial.println("----- Random Offset -----");
+          Serial.print("x: ");
+          Serial.print(xoffset);
+          Serial.print(",  y: ");
+          Serial.println(yoffset);
+        #endif
+      }
+    }
+  }
+}
+
+uint16_t mode_simplexnoise()
+{
+  //SEGMENT.intensity
+  //SEGMENT.speed
+  timeinc = (0.00002 * SEGMENT.speed);
+  xoffset += timeinc;
+  spaceinc = (SEGMENT.intensity / 2550.0);
+
+  //SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
+  SimplexNoisePatternFull(spaceinc, xoffset, yoffset);
+  
+  return FRAMETIME;
+}
+static const char _data_FX_MODE_SIMPLEXNOISE[] PROGMEM = "Simplex Noise@!,Spread;;!";
+
+///////////// END WELICAN GEMINA STUFF ///////////////////
 
 #ifndef WLED_DISABLE_2D
 ///////////////////////////////////////////////////////////////////////////////
@@ -7338,6 +7564,7 @@ void WS2812FX::setupEffectData() {
   }
   // now replace all pre-allocated effects
   // --- 1D non-audio effects ---
+  addEffect(FX_MODE_SIMPLEXNOISE, &mode_simplexnoise, _data_FX_MODE_SIMPLEXNOISE);
   addEffect(FX_MODE_BLINK, &mode_blink, _data_FX_MODE_BLINK);
   addEffect(FX_MODE_BREATH, &mode_breath, _data_FX_MODE_BREATH);
   addEffect(FX_MODE_COLOR_WIPE, &mode_color_wipe, _data_FX_MODE_COLOR_WIPE);

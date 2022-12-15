@@ -21,6 +21,9 @@
  */
 
 //class name. Use something descriptive and leave the ": public Usermod" part :)
+
+
+
 class WelicanPrism : public Usermod {
  private:
     //Private class members. You can declare variables and functions only accessible to your usermod here
