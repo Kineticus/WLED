@@ -4646,11 +4646,12 @@ float SimplexNoise(float x, float y, float z) {
   return k_fn(hi) + k_fn(3 - hi - lo) + k_fn(lo) + k_fn(0);
 }
 
+/*
 void SimplexNoisePatternInterpolated(float spaceinc, float xoffset, float yoffset) {
 
   // Simplex noise for whole strip of LEDs.
   // (Well, it's simplex noise for set number of LEDs and cubic interpolation between those nodes.)
-  
+  // Optimized for Slow CPU / Large Memory
     // Calculate simplex noise for LEDs that are nodes:
     // Store raw values from simplex function (-0.347 to 0.347)
     //float xoffset = 0.0;
@@ -4692,7 +4693,6 @@ void SimplexNoisePatternInterpolated(float spaceinc, float xoffset, float yoffse
       LED_array_blue[i] = LED_array_blue[last_node] * ( t_cubedx2 - t_squaredx3 + 1.0 ) + LED_array_blue[next_node] * ( -t_cubedx2 + t_squaredx3 );
     }
   }
-  
  
   // Convert values from raw noise to scaled r,g,b and feed to strip
   for (int i=0; i<SEGLEN; i++) {
@@ -4714,33 +4714,28 @@ void SimplexNoisePatternInterpolated(float spaceinc, float xoffset, float yoffse
     SEGMENT.setPixelColor(i, r,g, b);
   }
 }
+*/
 
 void SimplexNoisePatternFull(float spaceinc, float xoffset, float yoffset) {
 
   // Simplex noise for whole strip of LEDs.
-  // (Well, it's simplex noise for set number of LEDs and cubic interpolation between those nodes.)
-  
-    // Calculate simplex noise for LEDs that are nodes:
-    // Store raw values from simplex function (-0.347 to 0.347)
-    //float xoffset = 0.0;
+  // Optimized for Fast CPU / Low Memory
 
-  float LED_array_red[SEGLEN];
-  float LED_array_green[SEGLEN];
-  float LED_array_blue[SEGLEN];
-  
-  for (int i=0; i<=SEGLEN; i++) {
-    xoffset += spaceinc;
-    LED_array_red[i] = SimplexNoise(xoffset,yoffset,0);
-    LED_array_green[i] = SimplexNoise(xoffset,yoffset,1);
-    LED_array_blue[i] = SimplexNoise(xoffset,yoffset,2);
-  }
- 
- 
-  // Convert values from raw noise to scaled r,g,b and feed to strip
+  float checkOffset = 0;
+  float rS, gS, bS;
+  int r, g, b;
+
   for (int i=0; i<SEGLEN; i++) {
-    int r = bri*((LED_array_red[i]*734 + 16)/255);
-    int g = bri*((LED_array_green[i]*734 + 16)/255);
-    int b = bri*((LED_array_blue[i]*734 + 16)/255);
+    xoffset += spaceinc;
+    rS = SimplexNoise(xoffset,yoffset,0);
+    gS = SimplexNoise(xoffset,yoffset,1);
+    bS = SimplexNoise(xoffset,yoffset,2);
+
+    r = bri*((rS*734 + 16)/255);
+    g = bri*((gS*734 + 16)/255);
+    b = bri*((bS*734 + 16)/255);
+
+    checkOffset += rS + gS + bS;
       
     if ( r>255 ) { r=255; }
     else if ( r<0 ) { r=0; }  // Adds no time at all. Conclusion: constrain() sucks.
@@ -4758,12 +4753,8 @@ void SimplexNoisePatternFull(float spaceinc, float xoffset, float yoffset) {
 
   //Better Offset Checking
   //Probably should just have another for loop that adds them all up to be more accurate
-  if ((LED_array_red[0] == 0) && (LED_array_green[0] == 0) && (LED_array_blue[0] == 0))
+  if (checkOffset == 0)
   {
-    if ((LED_array_red[SEGLEN / 2] == 0) && (LED_array_green[SEGLEN / 2] == 0) && (LED_array_blue[SEGLEN / 2] == 0))
-    {
-      if ((LED_array_red[SEGLEN] == 0) && (LED_array_green[SEGLEN] == 0) && (LED_array_blue[SEGLEN] == 0))
-      {
         //Generate new offset with random and environmental (pin voltages)
         yoffset = random(-5000, 8000);
  	      xoffset = random(-5000, 8000);
@@ -4774,8 +4765,6 @@ void SimplexNoisePatternFull(float spaceinc, float xoffset, float yoffset) {
           Serial.print(",  y: ");
           Serial.println(yoffset);
         #endif
-      }
-    }
   }
 }
 
@@ -4784,7 +4773,7 @@ uint16_t mode_simplexnoise()
   //SEGMENT.intensity
   //SEGMENT.speed
   timeinc = (0.00002 * SEGMENT.speed);
-  xoffset += timeinc;
+  xoffset -= timeinc;
   spaceinc = (SEGMENT.intensity / 2550.0);
 
   //SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
