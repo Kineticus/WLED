@@ -44,10 +44,12 @@ class WelicanPrism : public Usermod {
 	//WELICAN START
 	int fadeAmount = 8;  // how many points to fade the Neopixel with each step
 	int tempBri = 0;
+  int tempEncoder = 0;
 	byte presetCurrent = 0;
 	byte presetMax = 10;
 	unsigned long currentTime;
 	unsigned long loopTime;
+  unsigned long encoderTime;
 
 	const int pinA1 = D1;  // DT from encoder
 	const int pinB1 = D2;  // CLK from encoder
@@ -112,52 +114,18 @@ class WelicanPrism : public Usermod {
     void loop() {
      currentTime = millis();  // get the current elapsed time
 	  //if((currentTime - loopTime) >= 2)  // 2ms since last check of encoder = 500Hz 
-	  if((currentTime - loopTime) >= 1)  // 1ms since last check of encoder = 1 kHz 
+	  //if((currentTime - encoderTime) >= 1)  // 1ms since last check of encoder = 1 kHz 
 	  //if (1 == 1)
-	  {
+	  //{
 		int Enc_A1 = digitalRead(pinA1);  // Read encoder pins
 		int Enc_B1 = digitalRead(pinB1);   
 		if((! Enc_A1) && (Enc_A1_prev)) { // A has gone from high to low
-		  if(Enc_B1 == HIGH) { // B is high so clockwise
-			//if(bri + fadeAmount <= 255) bri += fadeAmount;   // increase the brightness, dont go over 255
-			
-			if (bri < 40)
-			{
-			  tempBri = bri + fadeAmount / 4;
-			}
-			else if (bri < 80)
-			{
-			  tempBri = bri + fadeAmount / 2;
-			}
-			else if (bri < 160)
-			{
-			  tempBri = bri + fadeAmount;
-			}
-			else
-			{
-			  tempBri = bri + fadeAmount * 2;
-			}
-
-			if (tempBri > 255)
-			{
-			  tempBri = 255;
-			}
-			bri = tempBri;
-			Serial.print("Up   - ");
-			Serial.println(bri);
-			colorUpdated(6);
+		  if(Enc_B1 == HIGH) { // B is high so clockwise		
+        tempEncoder += 1;
+		
 		  } else if (Enc_B1 == LOW) { // B is low so counter-clockwise
-			//if(bri - fadeAmount >= 0) bri -= fadeAmount;   // decrease the brightness, dont go below 0   
-			tempBri = bri - fadeAmount;
-
-			if (tempBri < 0)
-			{
-			  tempBri = 0;
-			}
-			bri = tempBri;
-			Serial.print("Down - ");
-			Serial.println(bri);  
-			colorUpdated(6);     
+        tempEncoder -= 1;
+			   
 		  }   
 		}   
 		Enc_A1_prev = Enc_A1;     // Store value of A for next time    
@@ -227,11 +195,55 @@ class WelicanPrism : public Usermod {
 		  applyPreset(20, 0);
 		  Serial.println("CC");
 		  colorUpdated(8);
-		}
+		}	
+    //encoderTime = currentTime;
+	  //}
+    if((currentTime - loopTime) >= 125)
+    {
 
-		loopTime = currentTime;  // Updates loopTime
-		
-	  }
+      if (abs(tempEncoder) > 5) // 125% acceleration
+      {
+        tempEncoder = tempEncoder * 18;
+      }
+      else if (abs(tempEncoder) > 4) // 100% acceleration
+      {
+        tempEncoder = tempEncoder * 10;
+      }
+      else if (abs(tempEncoder) > 3) // 75%
+      {
+        tempEncoder = tempEncoder * 6;
+      }
+      else if (abs(tempEncoder) > 2) // 50%
+      {
+        tempEncoder = tempEncoder * 4;
+      }
+      else if (abs(tempEncoder) > 1) // 25%  acceleration
+      {
+        tempEncoder = tempEncoder * 2;
+      }
+      else //No acceleration applied
+      {
+        tempEncoder = tempEncoder;
+      }
+
+      tempBri = bri + tempEncoder;
+
+      if (tempBri > 255)
+			{
+			  tempBri = 255;
+			}
+
+      if (tempBri < 0)
+			{
+			  tempBri = 0;
+			}
+			bri = tempBri;
+			//Serial.print("Down - ");
+			//Serial.println(bri);  
+			colorUpdated(6);  
+      tempEncoder = 0;
+      loopTime = currentTime;  // Updates loopTime  
+    }
     }
 
 
