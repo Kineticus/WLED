@@ -4658,7 +4658,11 @@ void SimplexNoisePatternInterpolated(float spaceinc, float xoffset, float yoffse
   float LED_array_red[SEGLEN];
   float LED_array_green[SEGLEN];
   float LED_array_blue[SEGLEN];
-  LEDs_for_simplex = SEGLEN / 3;
+  LEDs_for_simplex = SEGLEN / 4;
+  if (LEDs_for_simplex == 0)
+  {
+    LEDs_for_simplex = 1;
+  }
   node_spacing = SEGLEN / LEDs_for_simplex;
   
     for (int i=0; i<=SEGLEN; i=i+node_spacing) {
@@ -4774,8 +4778,9 @@ uint16_t mode_simplexnoise()
   xoffset -= timeinc;
   spaceinc = (SEGMENT.intensity / 2550.0);
 
-  //SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
+  SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
 
+  /*
   if (SEGLEN > 50)
   {
     SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
@@ -4784,6 +4789,8 @@ uint16_t mode_simplexnoise()
   {
     SimplexNoisePatternFull(spaceinc, xoffset, yoffset);
   }
+  */
+
   return FRAMETIME;
 }
 static const char _data_FX_MODE_SIMPLEXNOISE[] PROGMEM = "Simplex Noise@!,Spread;;!";

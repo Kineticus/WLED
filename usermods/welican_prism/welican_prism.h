@@ -174,7 +174,7 @@ class WelicanPrism : public Usermod {
         if(Enc_B2 == HIGH) { // B is high so clockwise
         presetCurrent += 1;
         
-        if (presetCurrent >= presetMax) presetCurrent = 0;
+        if (presetCurrent > presetMax) presetCurrent = 1;
         
         applyPreset(presetCurrent, 0);
         //Serial.println(presetCurrent);
@@ -206,7 +206,7 @@ class WelicanPrism : public Usermod {
       }	
       encoderTime = currentTime;
 	  }
-    
+
     if((currentTime - loopTime) >= 125)
     {
       if (abs(tempEncoder) > 5) // 125% acceleration
@@ -236,6 +236,11 @@ class WelicanPrism : public Usermod {
 
       tempBri = bri + tempEncoder;
 
+      if (bri != tempBri)
+      {
+        colorUpdated(6); 
+      }
+
       if (tempBri > 255)
 			{
 			  tempBri = 255;
@@ -248,7 +253,6 @@ class WelicanPrism : public Usermod {
 			bri = tempBri;
 			//Serial.print("Down - ");
 			//Serial.println(bri);  
-			colorUpdated(6);  
       tempEncoder = 0;
       loopTime = currentTime;  // Updates loopTime  
       }
