@@ -557,7 +557,8 @@ function populatePresets(fromls)
 	delete pJson["0"];
 	var cn = "";
 	var arr = Object.entries(pJson);
-	arr.sort(cmpP);
+	//Commented this out to Sort Presets by ID instead of Name.
+	//arr.sort(cmpP);
 	pQL = [];
 	var is = [];
 	pNum = 0;

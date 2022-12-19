@@ -4776,7 +4776,7 @@ uint16_t mode_simplexnoise()
 
   //SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
 
-  if (SEGLEN > 100)
+  if (SEGLEN > 50)
   {
     SimplexNoisePatternInterpolated(spaceinc, xoffset, yoffset);
   }

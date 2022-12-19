@@ -89,8 +89,18 @@ class WelicanPrism : public Usermod {
 	  pinMode(pinC2, INPUT_PULLUP);
 	  currentTime = millis();
 	  loopTime = currentTime;
+    String name = "";
+    for (byte presetIndex = 1; presetIndex <= 250; presetIndex++) 
+    {
+      if (!getPresetName(presetIndex, name)) 
+      {
+        presetMax = presetIndex - 1;
+        break; // no more presets
+      }
     }
-
+    //Serial.println("PRESET MAX: ");
+    //Serial.println(presetMax);
+    }
 
     /*
      * connected() is called every time the WiFi is (re)connected
@@ -114,93 +124,91 @@ class WelicanPrism : public Usermod {
     void loop() {
      currentTime = millis();  // get the current elapsed time
 	  //if((currentTime - loopTime) >= 2)  // 2ms since last check of encoder = 500Hz 
-	  //if((currentTime - encoderTime) >= 1)  // 1ms since last check of encoder = 1 kHz 
-	  //if (1 == 1)
-	  //{
-		int Enc_A1 = digitalRead(pinA1);  // Read encoder pins
-		int Enc_B1 = digitalRead(pinB1);   
-		if((! Enc_A1) && (Enc_A1_prev)) { // A has gone from high to low
-		  if(Enc_B1 == HIGH) { // B is high so clockwise		
-        tempEncoder += 1;
-		
-		  } else if (Enc_B1 == LOW) { // B is low so counter-clockwise
-        tempEncoder -= 1;
-			   
-		  }   
-		}   
-		Enc_A1_prev = Enc_A1;     // Store value of A for next time    
-		
+	  if((currentTime - encoderTime) >= 1)  // 1ms since last check of encoder = 1 kHz 
+    {
+      int Enc_A1 = digitalRead(pinA1);  // Read encoder pins
+      int Enc_B1 = digitalRead(pinB1);   
+      if((! Enc_A1) && (Enc_A1_prev)) { // A has gone from high to low
+        if(Enc_B1 == HIGH) { // B is high so clockwise		
+          tempEncoder += 1;
+      
+        } else if (Enc_B1 == LOW) { // B is low so counter-clockwise
+          tempEncoder -= 1;
+          
+        }   
+      }   
+      Enc_A1_prev = Enc_A1;     // Store value of A for next time    
+      
+      /* Encoder for MODES
+      int Enc_A2 = digitalRead(pinA2);  // Read encoder pins
+      int Enc_B2 = digitalRead(pinB2);   
+      if((! Enc_A2) && (Enc_A2_prev)) { // A has gone from high to low
+        if(Enc_B2 == HIGH) { // B is high so clockwise
+        effectCurrent += 1;
+        if (effectCurrent >= MODE_COUNT) effectCurrent = 0;
+        colorUpdated(8);
+        Serial.print("2 Up - ");
+        Serial.println(effectCurrent);  
+        } else if (Enc_B2 == LOW) { // B is low so counter-clockwise
+        
+        if (effectCurrent <= 0)
+        {
+          effectCurrent = (MODE_COUNT-1);
+        }
+        else
+        {
+          effectCurrent -= 1;
+        }
+        colorUpdated(8);
+        Serial.print("2 Down - ");
+        Serial.println(effectCurrent);      
+        }   
+      }   
+      Enc_A2_prev = Enc_A2;     // Store value of A for next time   
+      */
+      
+      //Encoder for PRESETS
+      int Enc_A2 = digitalRead(pinA2);  // Read encoder pins
+      int Enc_B2 = digitalRead(pinB2);   
+      if((! Enc_A2) && (Enc_A2_prev)) { // A has gone from high to low
+        if(Enc_B2 == HIGH) { // B is high so clockwise
+        presetCurrent += 1;
+        
+        if (presetCurrent >= presetMax) presetCurrent = 0;
+        
+        applyPreset(presetCurrent, 0);
+        //Serial.println(presetCurrent);
+        //colorUpdated(8);
+        } else if (Enc_B2 == LOW) { // B is low so counter-clockwise
+        
+        if (presetCurrent < 2)
+        {
+          presetCurrent = presetMax;
+        }
+        else
+        {
+          presetCurrent -= 1;
+        }
+        applyPreset(presetCurrent, 0);
+        //Serial.println(presetCurrent);
+        //colorUpdated(8);    
+        }   
+      }   
+      Enc_A2_prev = Enc_A2;     // Store value of A for next time   
 
 
-		/* Encoder for MODES
-		int Enc_A2 = digitalRead(pinA2);  // Read encoder pins
-		int Enc_B2 = digitalRead(pinB2);   
-		if((! Enc_A2) && (Enc_A2_prev)) { // A has gone from high to low
-		  if(Enc_B2 == HIGH) { // B is high so clockwise
-			effectCurrent += 1;
-			if (effectCurrent >= MODE_COUNT) effectCurrent = 0;
-			colorUpdated(8);
-			Serial.print("2 Up - ");
-			Serial.println(effectCurrent);  
-		  } else if (Enc_B2 == LOW) { // B is low so counter-clockwise
-			
-			if (effectCurrent <= 0)
-			{
-			  effectCurrent = (MODE_COUNT-1);
-			}
-			else
-			{
-			  effectCurrent -= 1;
-			}
-			colorUpdated(8);
-			Serial.print("2 Down - ");
-			Serial.println(effectCurrent);      
-		  }   
-		}   
-		Enc_A2_prev = Enc_A2;     // Store value of A for next time   
-		*/
-		
-		//Encoder for PRESETS
-		int Enc_A2 = digitalRead(pinA2);  // Read encoder pins
-		int Enc_B2 = digitalRead(pinB2);   
-		if((! Enc_A2) && (Enc_A2_prev)) { // A has gone from high to low
-		  if(Enc_B2 == HIGH) { // B is high so clockwise
-			presetCurrent += 1;
-			
-			if (presetCurrent >= presetMax) presetCurrent = 0;
-			
-			applyPreset(presetCurrent, 0);
-			
-			//colorUpdated(8);
-		  } else if (Enc_B2 == LOW) { // B is low so counter-clockwise
-			
-			if (presetCurrent <= 2)
-			{
-			  presetCurrent = (presetMax);
-			}
-			else
-			{
-			  presetCurrent -= 1;
-			}
-			applyPreset(presetCurrent, 0);
-			//colorUpdated(8);    
-		  }   
-		}   
-		Enc_A2_prev = Enc_A2;     // Store value of A for next time   
-
-
-		if (digitalRead(pinC2) == LOW)
-		{
-		  //effectCurrent = 0;
-		  applyPreset(20, 0);
-		  Serial.println("CC");
-		  colorUpdated(8);
-		}	
-    //encoderTime = currentTime;
-	  //}
+      if (digitalRead(pinC2) == LOW)
+      {
+        //effectCurrent = 0;
+        applyPreset(20, 0);
+        //Serial.println("CC");
+        colorUpdated(8);
+      }	
+      encoderTime = currentTime;
+	  }
+    
     if((currentTime - loopTime) >= 125)
     {
-
       if (abs(tempEncoder) > 5) // 125% acceleration
       {
         tempEncoder = tempEncoder * 18;
@@ -223,7 +231,7 @@ class WelicanPrism : public Usermod {
       }
       else //No acceleration applied
       {
-        tempEncoder = tempEncoder;
+        //tempEncoder = 0;
       }
 
       tempBri = bri + tempEncoder;
@@ -243,7 +251,7 @@ class WelicanPrism : public Usermod {
 			colorUpdated(6);  
       tempEncoder = 0;
       loopTime = currentTime;  // Updates loopTime  
-    }
+      }
     }
 
 
