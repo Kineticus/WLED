@@ -1,6 +1,12 @@
 To upload the compiled bin file using ESP Tool:
 
-C:\Users\%USERNAME%\Documents\esptool-master\esptool.py --port COM6 write_flash 0x0000 "C:\Users\%USERNAME%\Documents\WLED-master\.pio\build\d1_mini_ota\firmware.bin"
+C:\Users\%USERNAME%\Documents\esptool-master\esptool.py --port COM6 write_flash 0x0000 "C:\Users\%USERNAME%\Documents\WLED-master\.pio\build\esp8266_2m\firmware.bin"
+
+If you get "serial.serialutil.SerialException: Cannot configure port, something went wrong. Original message: PermissionError(13, 'A device attached to the system is not functioning.', None, 31)"
+
+Try the older version 3.5 from 2019-03-18: CH341SER.EXE - Nanjing Qinheng Microelectronics Co., Ltd.
+
+https://web.archive.org/web/20211129002033/http://www.wch-ic.com/downloads/CH341SER_EXE.html
 
 Wiring:
 
